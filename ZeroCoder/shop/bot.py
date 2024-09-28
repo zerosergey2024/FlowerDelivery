@@ -1,12 +1,15 @@
+# shop/bot.py
+
 import os
 import django
-from telegram import Update, Bot
+from telegram import Update
 from telegram.ext import CommandHandler, CallbackContext, Updater
+from django.conf import settings
 from django.core.management.base import BaseCommand
-from shop.models import Order
+from .models import Order  # Убедитесь, что модель Order импортируется корректно
 
 # Настройка окружения Django
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'ZeroCoder.settings')  # Имя вашего проекта
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'ZeroCoder.settings')
 django.setup()
 
 # Логика обработки команд Telegram
@@ -17,7 +20,7 @@ def start(update: Update, context: CallbackContext):
 def order(update: Update, context: CallbackContext):
     """Отправка сообщения с заказами пользователя"""
     user = update.message.from_user
-    orders = Order.objects.filter(user__telegram_id=user.id)
+    orders = Order.objects.filter(telegram_id=user.id)  # Используйте telegram_id, если это поле у вас в модели Order
 
     if not orders:
         update.message.reply_text("У вас нет заказов.")
@@ -36,7 +39,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **kwargs):
         # Укажите свой токен Telegram API
-        bot_token = 'YOUR_BOT_TOKEN_HERE'
+        bot_token = settings.TELEGRAM_BOT_TOKEN # Используйте переменные окружения
         updater = Updater(token=bot_token, use_context=True)
         dispatcher = updater.dispatcher
 
@@ -51,9 +54,4 @@ class Command(BaseCommand):
         updater.start_polling()
         updater.idle()  # Ожидание завершения работы бота
 
-        if __name__ == '__main__':
-            import os
-            import django
-            os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'flower_delivery.settings')
-            django.setup()
-            
+
