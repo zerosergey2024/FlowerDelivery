@@ -1,57 +1,59 @@
-# shop/bot.py
-
 import os
 import django
+from django.shortcuts import redirect
+import requests
 from telegram import Update
-from telegram.ext import CommandHandler, CallbackContext, Updater
-from django.conf import settings
-from django.core.management.base import BaseCommand
-from .models import Order  # Убедитесь, что модель Order импортируется корректно
-
-# Настройка окружения Django
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'ZeroCoder.settings')
+from telegram.ext import Application, CommandHandler, ContextTypes
+from config import TOKEN, ADMIN_CHAT_ID
 django.setup()
+from .models import Order  # Импорт моделей только после инициализации Django
 
-# Логика обработки команд Telegram
-def start(update: Update, context: CallbackContext):
-    """Отправка приветственного сообщения при команде /start"""
-    update.message.reply_text("Добро пожаловать в сервис доставки цветов! Введите /order для заказа.")
 
-def order(update: Update, context: CallbackContext):
-    """Отправка сообщения с заказами пользователя"""
-    user = update.message.from_user
-    orders = Order.objects.filter(telegram_id=user.id)  # Используйте telegram_id, если это поле у вас в модели Order
+# Установите переменную окружения с указанием на файл настроек вашего проекта
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'ZeroCoder.settings')
 
-    if not orders:
-        update.message.reply_text("У вас нет заказов.")
-    else:
-        message = "Ваши заказы:\n"
+# Настройка Django
+django.setup()  # Эта строка должна быть перед любым импортом, связанным с моделями
+
+# Команда /start
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text('Welcome to the Flower Delivery Bot!')
+
+# Уведомление об новых заказах
+async def notify_admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    orders = Order.objects.filter(status='new')
+    if orders.exists():
+        message = 'New Orders:\n'
         for order in orders:
-            message += f"- Заказ #{order.id}: {order.status} - {order.total_price} USD\n"
-        update.message.reply_text(message)
+            message += f'Order {order.id} for {order.user.username}, Delivery Address: {order.delivery_address}\n'
+        await update.message.reply_text(message)
+    else:
+        await update.message.reply_text('No new orders.')
 
-def unknown(update: Update, context: CallbackContext):
-    """Ответ на неизвестные команды"""
-    update.message.reply_text("Извините, я не понимаю эту команду.")
+# Отправка уведомления через Telegram при оформлении заказа
+def cart(request):
+    # Код оформления заказа
+    address = 'some_address'  # Вставьте реальный адрес
+    message = f'New order from {request.user.username}, delivery address: {address}'
+    requests.get(f'https://api.telegram.org/bot{TOKEN}/sendMessage?chat_id={ADMIN_CHAT_ID}&text={message}')
+    return redirect('order_history')
 
-class Command(BaseCommand):
-    help = 'Запуск Telegram бота'
+# Инициализация и запуск бота
+def main():
+    # Создаем приложение
+    application = Application.builder().token(TOKEN).build()
 
-    def handle(self, *args, **kwargs):
-        # Укажите свой токен Telegram API
-        bot_token = settings.TELEGRAM_BOT_TOKEN # Используйте переменные окружения
-        updater = Updater(token=bot_token, use_context=True)
-        dispatcher = updater.dispatcher
+    # Добавляем обработчики команд
+    application.add_handler(CommandHandler('start', start))
+    application.add_handler(CommandHandler('orders', notify_admin))
 
-        # Обработчики команд
-        dispatcher.add_handler(CommandHandler("start", start))
-        dispatcher.add_handler(CommandHandler("order", order))
+    # Запуск бота
+    application.run_polling()
 
-        # Обработчик неизвестных команд
-        dispatcher.add_handler(CommandHandler("unknown", unknown))
+if __name__ == '__main__':
+    main()
 
-        # Запуск бота
-        updater.start_polling()
-        updater.idle()  # Ожидание завершения работы бота
+
+
 
 

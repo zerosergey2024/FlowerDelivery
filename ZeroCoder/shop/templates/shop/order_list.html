@@ -1,0 +1,23 @@
+<!-- shop/templates/flowers/order_list.html -->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order List</title>
+</head>
+<body>
+    <h1>Order List</h1>
+    <ul>
+        {% for order in orders %}
+            <li>
+                <h2>Order {{ order.id }} by {{ order.user.username }}</h2>
+                <p>Status: {{ order.status }}</p>
+                <p>Delivery Address: {{ order.delivery_address }}</p>
+                <p>Total Price: {{ order.total_price }}</p>
+            </li>
+        {% endfor %}
+    </ul>
+</body>
+</html>

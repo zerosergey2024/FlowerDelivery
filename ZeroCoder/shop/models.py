@@ -1,3 +1,5 @@
+# flowers/models.py
+
 from django.db import models
 from django.contrib.auth.models import User
 
@@ -10,7 +12,6 @@ class Product(models.Model):
 
     def __str__(self):
         return self.name
-
 
 # Модель Order представляет собой заказ, который пользователь может оформить.
 class Order(models.Model):
@@ -29,7 +30,6 @@ class Order(models.Model):
 
     def __str__(self):
         return f"Order {self.id} by {self.user.username}"
-
 
 # Модель Review представляет собой отзыв, который пользователь может оставить о товаре.
 class Review(models.Model):
